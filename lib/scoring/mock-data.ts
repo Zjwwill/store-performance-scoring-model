@@ -1,0 +1,68 @@
+import { buildScoreRecord } from "@/lib/scoring/calculations";
+import type { ScoreRecord } from "@/lib/scoring/types";
+
+export const mockScoreRecords: ScoreRecord[] = [
+  buildScoreRecord({
+    month: "2026-03",
+    store: "Edison",
+    missingInvoiceCount: 1,
+    invoiceErrorCount: 2,
+    midInventoryLate: true,
+    endInventoryLate: false,
+    weeklyReportLateCount: 1,
+    weeklyReportFormatErrorCount: 0,
+    severePriceIssue: false,
+    cashMissingDays: 1,
+    depositLateCount: 0,
+    cashMismatchCount: 1,
+    employeeMealMissingCount: 1,
+    wasteLogIssueCount: 0,
+    employeeInfoErrorCount: 1,
+    slingLateCount: 0,
+    opusAssigned: true,
+    opusLateCount: 1,
+    remark: "Sample self-procurement store record"
+  }),
+  buildScoreRecord({
+    month: "2026-03",
+    store: "Milpitas",
+    missingInvoiceCount: 3,
+    invoiceErrorCount: 2,
+    midInventoryLate: false,
+    endInventoryLate: true,
+    weeklyReportLateCount: 1,
+    weeklyReportFormatErrorCount: 2,
+    severePriceIssue: false,
+    cashMissingDays: 0,
+    depositLateCount: 1,
+    cashMismatchCount: 0,
+    employeeMealMissingCount: 0,
+    wasteLogIssueCount: 1,
+    employeeInfoErrorCount: 0,
+    slingLateCount: 1,
+    opusAssigned: false,
+    opusLateCount: 0,
+    remark: "Bay area sample with inventory late"
+  }),
+  buildScoreRecord({
+    month: "2026-02",
+    store: "Boston",
+    missingInvoiceCount: 0,
+    invoiceErrorCount: 1,
+    midInventoryLate: false,
+    endInventoryLate: false,
+    weeklyReportLateCount: 0,
+    weeklyReportFormatErrorCount: 1,
+    severePriceIssue: false,
+    cashMissingDays: 0,
+    depositLateCount: 0,
+    cashMismatchCount: 0,
+    employeeMealMissingCount: 0,
+    wasteLogIssueCount: 0,
+    employeeInfoErrorCount: 1,
+    slingLateCount: 0,
+    opusAssigned: true,
+    opusLateCount: 0,
+    remark: "Strong month with minor admin issues"
+  })
+];
