@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { Fragment } from "react";
 import { useState } from "react";
 import { useScoreRecords } from "@/components/scoring/use-score-records";
 import { STORE_TYPE_DISPLAY, STORE_TYPE_LABELS } from "@/lib/scoring/config";
 import { downloadOverviewExport } from "@/lib/scoring/import-export";
-import type { OverviewSortField, ScoreRecord, StoreType } from "@/lib/scoring/types";
+import type { OverviewSortField, ScoreHistoryRecord, ScoreRecord, StoreType } from "@/lib/scoring/types";
 
 function sortRecords(records: ScoreRecord[], sortField: OverviewSortField, sortDirection: "asc" | "desc") {
   return [...records].sort((left, right) => {
@@ -31,13 +32,15 @@ function OverviewSummaryCard({ label, value }: { label: string; value: string })
 }
 
 export function OverviewPageClient() {
-  const { records, hydrated, removeRecord, clearAllRecords, loadMockRecords } = useScoreRecords();
+  const { records, historyEntries, hydrated, errorMessage, removeRecord, clearAllRecords, loadMockRecords } = useScoreRecords();
   const [sortField, setSortField] = useState<OverviewSortField>("month");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [monthFilter, setMonthFilter] = useState("");
   const [storeTypeFilter, setStoreTypeFilter] = useState<StoreType | "">("");
   const [storeSearch, setStoreSearch] = useState("");
   const [message, setMessage] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
 
   const filteredRecords = sortRecords(
     records.filter((record) => {
@@ -74,12 +77,20 @@ export function OverviewPageClient() {
     setSortDirection(field === "store" || field === "storeType" ? "asc" : "desc");
   }
 
-  function handleDelete(record: ScoreRecord) {
+  function getHistoryStore(historyEntry: ScoreHistoryRecord) {
+    return historyEntry.newData?.store ?? historyEntry.oldData?.store ?? "--";
+  }
+
+  function getHistoryMonth(historyEntry: ScoreHistoryRecord) {
+    return historyEntry.newData?.month ?? historyEntry.oldData?.month ?? "--";
+  }
+
+  async function handleDelete(record: ScoreRecord) {
     if (!window.confirm(`确认删除 ${record.month} 的 ${record.store} 评分记录吗？`)) {
       return;
     }
 
-    removeRecord(record.id);
+    await removeRecord(record.id);
     setMessage(`已删除 ${record.month} - ${record.store} 的评分记录。`);
   }
 
@@ -119,21 +130,29 @@ export function OverviewPageClient() {
             </button>
             <button
               type="button"
-              onClick={loadMockRecords}
+              onClick={() => void loadMockRecords()}
               className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               加载示例数据
             </button>
             <button
               type="button"
-              onClick={clearAllRecords}
+              onClick={() => void clearAllRecords()}
               className="rounded-xl border border-rose-300 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
             >
               清空全部
             </button>
+            <button
+              type="button"
+              onClick={() => setShowHistory((current) => !current)}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              {showHistory ? "隐藏历史" : "View History"}
+            </button>
           </div>
         </div>
 
+        {errorMessage ? <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{errorMessage}</div> : null}
         {message ? <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">{message}</div> : null}
 
         <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -230,7 +249,7 @@ export function OverviewPageClient() {
                       </Link>
                       <button
                         type="button"
-                        onClick={() => handleDelete(record)}
+                        onClick={() => void handleDelete(record)}
                         className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
                       >
                         删除
@@ -250,6 +269,78 @@ export function OverviewPageClient() {
           </table>
         </div>
       </section>
+
+      {showHistory ? (
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">修改历史</h2>
+            <p className="mt-1 text-sm text-slate-600">展示所有新增、更新和删除操作。点击“展开”可查看 old_data 与 new_data。</p>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Time</th>
+                  <th className="px-4 py-3 font-medium">Store</th>
+                  <th className="px-4 py-3 font-medium">Month</th>
+                  <th className="px-4 py-3 font-medium">Action</th>
+                  <th className="px-4 py-3 font-medium">Changed By</th>
+                  <th className="px-4 py-3 font-medium">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historyEntries.map((historyEntry) => (
+                  <Fragment key={historyEntry.id}>
+                    <tr key={historyEntry.id} className="border-t border-slate-200">
+                      <td className="px-4 py-3">{new Date(historyEntry.changedAt).toLocaleString()}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{getHistoryStore(historyEntry)}</td>
+                      <td className="px-4 py-3">{getHistoryMonth(historyEntry)}</td>
+                      <td className="px-4 py-3 uppercase text-slate-700">{historyEntry.actionType}</td>
+                      <td className="px-4 py-3">{historyEntry.changedBy || "--"}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedHistoryId((current) => (current === historyEntry.id ? null : historyEntry.id))}
+                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          {expandedHistoryId === historyEntry.id ? "收起" : "展开"}
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedHistoryId === historyEntry.id ? (
+                      <tr className="border-t border-slate-100 bg-slate-50">
+                        <td colSpan={6} className="px-4 py-4">
+                          <div className="grid gap-4 lg:grid-cols-2">
+                            <div>
+                              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">old_data</div>
+                              <pre className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-700">
+                                {JSON.stringify(historyEntry.oldData, null, 2)}
+                              </pre>
+                            </div>
+                            <div>
+                              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">new_data</div>
+                              <pre className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-700">
+                                {JSON.stringify(historyEntry.newData, null, 2)}
+                              </pre>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                ))}
+                {historyEntries.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                      暂无历史记录。
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

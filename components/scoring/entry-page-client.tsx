@@ -30,7 +30,7 @@ function buildFormSeed(record?: ScoreRecord | null, month = "", store = ""): Par
 }
 
 export function EntryPageClient() {
-  const { records, hydrated, createRecord, updateRecord, loadMockRecords } = useScoreRecords();
+  const { records, hydrated, errorMessage, createRecord, updateRecord, loadMockRecords } = useScoreRecords();
   const [message, setMessage] = useState("");
   const [statusNotice, setStatusNotice] = useState("");
   const [editingRecord, setEditingRecord] = useState<ScoreRecord | null>(null);
@@ -111,17 +111,17 @@ export function EntryPageClient() {
     resetToCreateMode();
   }
 
-  function handleSave(value: ScoreInput) {
+  async function handleSave(value: ScoreInput) {
     try {
       if (editingRecord) {
-        const record = updateRecord(value, editingRecord.id);
+        const record = await updateRecord(value, editingRecord.id);
         loadExistingRecord(record, "已更新当前记录，可继续修改。");
         setMessage(`已更新 ${record.month} - ${record.store}，最终得分 ${record.finalScore.toFixed(2)}。`);
         router.replace("/");
         return;
       }
 
-      const record = createRecord(value);
+      const record = await createRecord(value);
       setMessage(`已新建 ${record.month} - ${record.store}，最终得分 ${record.finalScore.toFixed(2)}。`);
       setStatusNotice("");
       setFormSeed(buildFormSeed(null, record.month, ""));
@@ -163,12 +163,13 @@ export function EntryPageClient() {
           </div>
           <button
             type="button"
-            onClick={loadMockRecords}
+            onClick={() => void loadMockRecords()}
             className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             加载示例数据
           </button>
         </div>
+        {errorMessage ? <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{errorMessage}</div> : null}
         {message ? <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div> : null}
       </section>
 

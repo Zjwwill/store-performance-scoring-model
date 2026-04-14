@@ -44,6 +44,16 @@ export interface ScoreRecord extends ScoreInput, ScoreBreakdown {
   updatedAt: string;
 }
 
+export interface ScoreHistoryRecord {
+  id: string;
+  scoreId: string | null;
+  actionType: string;
+  oldData: Partial<ScoreRecord> | null;
+  newData: Partial<ScoreRecord> | null;
+  changedBy: string;
+  changedAt: string;
+}
+
 export type OverviewSortField =
   | "month"
   | "store"

@@ -15,7 +15,7 @@ function ImportStatCard({ label, value }: { label: string; value: string }) {
 }
 
 export function ImportPageClient() {
-  const { records, hydrated, mergeImportedRecords, replaceAllRecords } = useScoreRecords();
+  const { records, hydrated, errorMessage, mergeImportedRecords, replaceAllRecords } = useScoreRecords();
   const [previewRecords, setPreviewRecords] = useState<ScoreRecord[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [fileName, setFileName] = useState("");
@@ -48,17 +48,17 @@ export function ImportPageClient() {
     }
   }
 
-  function handleAppendImport() {
-    mergeImportedRecords(previewRecords);
+  async function handleAppendImport() {
+    await mergeImportedRecords(previewRecords);
     setMessage(`已导入 ${previewRecords.length} 条记录到评分总览。`);
   }
 
-  function handleReplaceImport() {
+  async function handleReplaceImport() {
     if (!window.confirm("确认用当前预览数据替换全部本地记录吗？")) {
       return;
     }
 
-    replaceAllRecords(previewRecords);
+    await replaceAllRecords(previewRecords);
     setMessage(`已用 ${previewRecords.length} 条导入记录替换本地数据。`);
   }
 
@@ -112,6 +112,7 @@ export function ImportPageClient() {
             <div className="mt-4 text-sm text-slate-600">
               必要字段请参考模板：至少需要 Month、Store，以及模板中列出的各项次数或勾选字段。
             </div>
+            {errorMessage ? <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{errorMessage}</div> : null}
             {message ? <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">{message}</div> : null}
             {isParsing ? <div className="mt-4 text-sm text-slate-500">正在解析文件并重新计算分数...</div> : null}
           </div>
@@ -123,7 +124,7 @@ export function ImportPageClient() {
               <button
                 type="button"
                 disabled={previewRecords.length === 0}
-                onClick={handleAppendImport}
+                onClick={() => void handleAppendImport()}
                 className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 追加到现有数据
@@ -131,7 +132,7 @@ export function ImportPageClient() {
               <button
                 type="button"
                 disabled={previewRecords.length === 0}
-                onClick={handleReplaceImport}
+                onClick={() => void handleReplaceImport()}
                 className="rounded-xl border border-rose-300 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
               >
                 替换全部本地数据

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 
 const navigationItems = [
@@ -12,18 +13,40 @@ const navigationItems = [
 
 export function ToolNavigation() {
   const pathname = usePathname();
+  const [operatorName, setOperatorName] = useState("");
+
+  useEffect(() => {
+    setOperatorName(window.localStorage.getItem("operator_name") ?? "");
+  }, []);
+
+  function handleOperatorNameChange(value: string) {
+    setOperatorName(value);
+    window.localStorage.setItem("operator_name", value);
+  }
 
   return (
     <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700">HQ Internal Tool</p>
             <h1 className="text-2xl font-semibold text-slate-950">门店数据管理评分工具</h1>
             <p className="text-sm text-slate-600">总部每月用于评分的内部工具，重点优化录入效率、评分稳定性和导出操作。</p>
           </div>
-          <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
-            总分 20 分，按模块封顶扣分
+          <div className="flex flex-col gap-3 lg:items-end">
+            <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
+              总分 20 分，按模块封顶扣分
+            </div>
+            <label className="flex flex-col gap-2 lg:w-72">
+              <span className="text-sm font-medium text-slate-800">Operator Name</span>
+              <input
+                type="text"
+                value={operatorName}
+                onChange={(event) => handleOperatorNameChange(event.target.value)}
+                placeholder="请输入操作人姓名"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+              />
+            </label>
           </div>
         </div>
         <nav className="grid gap-3 md:grid-cols-3">
