@@ -48,6 +48,25 @@ create index if not exists idx_store_scores_month_store on public.store_scores(m
 create index if not exists idx_score_history_score_id on public.score_history(score_id);
 create index if not exists idx_score_history_changed_at on public.score_history(changed_at desc);
 
+create table if not exists public.execution_compliance_records (
+  id uuid primary key default gen_random_uuid(),
+  store_id text not null,
+  check_date date not null,
+  month text not null,
+  section_type text not null default 'execution_compliance',
+  data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint execution_compliance_records_identity_unique unique (store_id, check_date, section_type),
+  constraint execution_compliance_records_section_type_check check (section_type = 'execution_compliance')
+);
+
+create index if not exists idx_execution_compliance_records_store_date
+on public.execution_compliance_records(store_id, check_date);
+
+create index if not exists idx_execution_compliance_records_store_month
+on public.execution_compliance_records(store_id, month);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -59,21 +78,35 @@ end;
 $$;
 
 drop trigger if exists set_store_scores_updated_at on public.store_scores;
+drop trigger if exists set_execution_compliance_records_updated_at on public.execution_compliance_records;
 
 create trigger set_store_scores_updated_at
 before update on public.store_scores
 for each row
 execute function public.set_updated_at();
 
+create trigger set_execution_compliance_records_updated_at
+before update on public.execution_compliance_records
+for each row
+execute function public.set_updated_at();
+
 alter table public.store_scores enable row level security;
 alter table public.score_history enable row level security;
+alter table public.execution_compliance_records enable row level security;
 
 drop policy if exists "Public can manage store scores" on public.store_scores;
+drop policy if exists "Public can manage execution compliance records" on public.execution_compliance_records;
 drop policy if exists "Public can view score history" on public.score_history;
 drop policy if exists "Public can write score history" on public.score_history;
 
 create policy "Public can manage store scores"
 on public.store_scores
+for all
+using (true)
+with check (true);
+
+create policy "Public can manage execution compliance records"
+on public.execution_compliance_records
 for all
 using (true)
 with check (true);
@@ -87,3 +120,5 @@ create policy "Public can write score history"
 on public.score_history
 for insert
 with check (true);
+
+grant select, insert, update, delete on public.execution_compliance_records to anon, authenticated;

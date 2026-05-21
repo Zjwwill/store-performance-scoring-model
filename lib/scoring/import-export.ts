@@ -1,6 +1,8 @@
 import * as XLSX from "xlsx";
 import { IMPORT_TEMPLATE_COLUMNS, IMPORT_TEMPLATE_SAMPLE_ROW } from "@/lib/scoring/config";
 import { buildScoreRecord } from "@/lib/scoring/calculations";
+import { buildExecutionComplianceDetailRows } from "@/lib/scoring/execution-compliance";
+import type { ExecutionComplianceRecord } from "@/lib/scoring/execution-compliance";
 import type { ScoreInput, ScoreRecord } from "@/lib/scoring/types";
 
 const BOOLEAN_FIELDS = new Set<keyof ScoreInput>([
@@ -174,6 +176,22 @@ function buildOverviewRows(records: ScoreRecord[]) {
   }));
 }
 
+function buildExecutionComplianceRows(records: ExecutionComplianceRecord[], includeEmpty = false) {
+  return buildExecutionComplianceDetailRows(records, includeEmpty).map((row) => ({
+    Store: row.storeId,
+    "Check Date": row.checkDate,
+    Month: row.month,
+    "Inspection Item": row.item,
+    "Sub-item / Field": row.subItem,
+    Quantity: row.count,
+    "Related Employees": row.relatedEmployees,
+    "Related Licenses": row.relatedLicenses,
+    "Related Systems": row.relatedSystems,
+    "Issue Details": row.issueContent,
+    Note: row.note
+  }));
+}
+
 export async function parseImportFile(file: File): Promise<ParsedImportResult> {
   const arrayBuffer = await file.arrayBuffer();
   const workbook = XLSX.read(arrayBuffer, { type: "array", cellDates: true });
@@ -235,4 +253,36 @@ export function downloadOverviewExport(records: ScoreRecord[], format: "xlsx" | 
   }
 
   downloadText(XLSX.utils.sheet_to_csv(worksheet), "store-scoring-overview.csv", "text/csv;charset=utf-8;");
+}
+
+export function downloadExecutionComplianceDailyExport(record: ExecutionComplianceRecord, format: "xlsx" | "csv"): void {
+  const worksheet = XLSX.utils.json_to_sheet(buildExecutionComplianceRows([record], true));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Execution Compliance");
+
+  if (format === "xlsx") {
+    XLSX.writeFile(workbook, `execution-compliance-${record.storeId}-${record.checkDate}.xlsx`);
+    return;
+  }
+
+  downloadText(
+    XLSX.utils.sheet_to_csv(worksheet),
+    `execution-compliance-${record.storeId}-${record.checkDate}.csv`,
+    "text/csv;charset=utf-8;"
+  );
+}
+
+export function downloadExecutionComplianceMonthlyExport(records: ExecutionComplianceRecord[], format: "xlsx" | "csv"): void {
+  const firstRecord = records[0];
+  const worksheet = XLSX.utils.json_to_sheet(buildExecutionComplianceRows(records));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Monthly Summary");
+  const fileStem = `execution-compliance-${firstRecord?.storeId ?? "store"}-${firstRecord?.month ?? "month"}-summary`;
+
+  if (format === "xlsx") {
+    XLSX.writeFile(workbook, `${fileStem}.xlsx`);
+    return;
+  }
+
+  downloadText(XLSX.utils.sheet_to_csv(worksheet), `${fileStem}.csv`, "text/csv;charset=utf-8;");
 }

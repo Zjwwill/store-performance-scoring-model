@@ -1,5 +1,5 @@
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
-import type { ScoreHistoryRecord, ScoreRecord, StoreType } from "@/lib/scoring/types";
+import type { ScoreHistoryData, ScoreHistoryRecord, ScoreRecord, StoreType } from "@/lib/scoring/types";
 
 interface ScoreRow {
   id: string;
@@ -38,8 +38,8 @@ interface ScoreHistoryRow {
   id: string;
   score_id: string | null;
   action_type: string;
-  old_data: Partial<ScoreRecord> | null;
-  new_data: Partial<ScoreRecord> | null;
+  old_data: ScoreHistoryData | null;
+  new_data: ScoreHistoryData | null;
   changed_by: string | null;
   changed_at: string;
 }

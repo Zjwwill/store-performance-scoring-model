@@ -78,7 +78,7 @@ export function OverviewPageClient() {
   }
 
   function getHistoryStore(historyEntry: ScoreHistoryRecord) {
-    return historyEntry.newData?.store ?? historyEntry.oldData?.store ?? "--";
+    return historyEntry.newData?.store ?? historyEntry.oldData?.store ?? historyEntry.newData?.storeId ?? historyEntry.oldData?.storeId ?? "--";
   }
 
   function getHistoryMonth(historyEntry: ScoreHistoryRecord) {

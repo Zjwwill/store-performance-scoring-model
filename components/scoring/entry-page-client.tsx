@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { ExecutionComplianceSection } from "@/components/scoring/execution-compliance-section";
 import { StoreScoringForm } from "@/components/scoring/store-scoring-form";
 import { useScoreRecords } from "@/components/scoring/use-score-records";
 import { DEFAULT_SCORE_INPUT, STORE_TYPE_DISPLAY } from "@/lib/scoring/config";
@@ -187,6 +188,8 @@ export function EntryPageClient() {
         onCancel={handleCancelEdit}
         onMonthStoreChange={handleMonthStoreChange}
       />
+
+      <ExecutionComplianceSection />
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div>

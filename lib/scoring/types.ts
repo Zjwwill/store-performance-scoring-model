@@ -44,12 +44,18 @@ export interface ScoreRecord extends ScoreInput, ScoreBreakdown {
   updatedAt: string;
 }
 
+export type ScoreHistoryData = Partial<ScoreRecord> & {
+  storeId?: string;
+  checkDate?: string;
+  sectionType?: string;
+};
+
 export interface ScoreHistoryRecord {
   id: string;
   scoreId: string | null;
   actionType: string;
-  oldData: Partial<ScoreRecord> | null;
-  newData: Partial<ScoreRecord> | null;
+  oldData: ScoreHistoryData | null;
+  newData: ScoreHistoryData | null;
   changedBy: string;
   changedAt: string;
 }
