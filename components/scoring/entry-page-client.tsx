@@ -9,6 +9,15 @@ import { useScoreRecords } from "@/components/scoring/use-score-records";
 import { DEFAULT_SCORE_INPUT, STORE_TYPE_DISPLAY } from "@/lib/scoring/config";
 import type { ScoreInput, ScoreRecord } from "@/lib/scoring/types";
 
+type EntryPanel = "overview" | "dataManagement" | "executionCompliance" | "recentRecords";
+
+const entryPanels: { id: EntryPanel; title: string; description: string }[] = [
+  { id: "overview", title: "工作台概览", description: "记录数量、最近月份和快速操作" },
+  { id: "dataManagement", title: "数据管理评分", description: "按月份和门店录入评分" },
+  { id: "executionCompliance", title: "执行与合规检查", description: "按天提交，按月汇总查看" },
+  { id: "recentRecords", title: "最近记录", description: "查看并回到历史评分" }
+];
+
 function EntrySummaryCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -32,6 +41,7 @@ function buildFormSeed(record?: ScoreRecord | null, month = "", store = ""): Par
 
 export function EntryPageClient() {
   const { records, hydrated, errorMessage, createRecord, updateRecord, loadMockRecords } = useScoreRecords();
+  const [activePanel, setActivePanel] = useState<EntryPanel>("dataManagement");
   const [message, setMessage] = useState("");
   const [statusNotice, setStatusNotice] = useState("");
   const [editingRecord, setEditingRecord] = useState<ScoreRecord | null>(null);
@@ -49,6 +59,7 @@ export function EntryPageClient() {
   const recentRecords = useMemo(() => records.slice(0, 6), [records]);
 
   function loadExistingRecord(record: ScoreRecord, notice = "已加载历史记录，可直接修改。") {
+    setActivePanel("dataManagement");
     setEditingRecord(record);
     setFormSeed(buildFormSeed(record));
     setFormKey(`entry-form-${record.id}-${Date.now()}`);
@@ -80,6 +91,7 @@ export function EntryPageClient() {
       return;
     }
 
+    setActivePanel("dataManagement");
     setStatusNotice("未找到指定记录，请重新选择月份和门店。");
   }, [editId, hydrated, records, router]);
 
@@ -148,95 +160,154 @@ export function EntryPageClient() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-4">
-        <EntrySummaryCard label="已保存记录" value={`${records.length}`} />
-        <EntrySummaryCard label="最近月份" value={latestMonth} />
-        <EntrySummaryCard label="最近月份记录数" value={`${latestMonthCount}`} />
-        <EntrySummaryCard label="平均得分" value={`${averageScore}`} />
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-950">快速月度录入</h2>
-            <p className="mt-1 text-sm text-slate-600">请先选月份，再选门店。若该月份和门店已有记录，系统会自动回填原始小分项并进入编辑模式。</p>
+    <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <aside className="lg:sticky lg:top-6 lg:self-start">
+        <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="px-2 pb-3 pt-1">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Sections</div>
+            <div className="mt-1 text-sm font-medium text-slate-900">门店评分工具</div>
           </div>
-          <button
-            type="button"
-            onClick={() => void loadMockRecords()}
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            加载示例数据
-          </button>
-        </div>
-        {errorMessage ? <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{errorMessage}</div> : null}
-        {message ? <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div> : null}
-      </section>
+          <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+            {entryPanels.map((panel) => {
+              const active = activePanel === panel.id;
 
-      <StoreScoringForm
-        key={formKey}
-        formKey={formKey}
-        initialValue={formSeed}
-        mode={editingRecord ? "edit" : "create"}
-        editingSummary={editingRecord ? `${editingRecord.store} - ${editingRecord.month}` : undefined}
-        statusNotice={statusNotice}
-        title={editingRecord ? "编辑门店评分" : "新建门店评分"}
-        description="录入页会显式区分新建和编辑，不再对同一个月份和门店进行静默覆盖。"
-        submitLabel={editingRecord ? "更新评分" : "保存评分"}
-        onSubmit={handleSave}
-        onCancel={handleCancelEdit}
-        onMonthStoreChange={handleMonthStoreChange}
-      />
-
-      <ExecutionComplianceSection />
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-950">最近记录</h2>
-          <p className="mt-1 text-sm text-slate-600">可以直接点“编辑”回到录入页，自动加载原记录。</p>
+              return (
+                <button
+                  key={panel.id}
+                  type="button"
+                  onClick={() => setActivePanel(panel.id)}
+                  className={`min-w-[180px] rounded-2xl border px-4 py-3 text-left transition lg:min-w-0 ${
+                    active ? "border-sky-300 bg-sky-50 shadow-sm" : "border-transparent hover:border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <span className="block text-sm font-semibold text-slate-950">{panel.title}</span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-500">{panel.description}</span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-4 py-3 font-medium">月份</th>
-                <th className="px-4 py-3 font-medium">门店</th>
-                <th className="px-4 py-3 font-medium">门店类型</th>
-                <th className="px-4 py-3 font-medium">总扣分</th>
-                <th className="px-4 py-3 font-medium">最终得分</th>
-                <th className="px-4 py-3 font-medium">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentRecords.map((record) => (
-                <tr key={record.id} className="border-t border-slate-200">
-                  <td className="px-4 py-3">{record.month}</td>
-                  <td className="px-4 py-3 font-medium text-slate-900">{record.store}</td>
-                  <td className="px-4 py-3 text-slate-600">{STORE_TYPE_DISPLAY[record.storeType]}</td>
-                  <td className="px-4 py-3">{record.totalDeduction.toFixed(2)}</td>
-                  <td className="px-4 py-3 font-semibold text-emerald-700">{record.finalScore.toFixed(2)}</td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/?edit=${record.id}`}
-                      className="inline-flex rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                    >
-                      编辑
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-              {records.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                    暂无记录。可以先使用上方表单录入，或加载示例数据进行演示。
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      </aside>
+
+      <div className="min-w-0 space-y-6">
+        {activePanel === "overview" ? (
+          <>
+            <section className="grid gap-4 md:grid-cols-4">
+              <EntrySummaryCard label="已保存记录" value={`${records.length}`} />
+              <EntrySummaryCard label="最近月份" value={latestMonth} />
+              <EntrySummaryCard label="最近月份记录数" value={`${latestMonthCount}`} />
+              <EntrySummaryCard label="平均得分" value={`${averageScore}`} />
+            </section>
+
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-950">快速操作</h2>
+                  <p className="mt-1 text-sm text-slate-600">左侧菜单可以在数据管理评分、执行与合规检查、最近记录之间切换。</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void loadMockRecords()}
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  加载示例数据
+                </button>
+              </div>
+              {errorMessage ? <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{errorMessage}</div> : null}
+              {message ? <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div> : null}
+            </section>
+          </>
+        ) : null}
+
+        {activePanel === "dataManagement" ? (
+          <>
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-950">数据管理评分</h2>
+                  <p className="mt-1 text-sm text-slate-600">请先选月份，再选门店。已有记录会自动回填并进入编辑模式。</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void loadMockRecords()}
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  加载示例数据
+                </button>
+              </div>
+              {errorMessage ? <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{errorMessage}</div> : null}
+              {message ? <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div> : null}
+            </section>
+
+            <StoreScoringForm
+              key={formKey}
+              formKey={formKey}
+              initialValue={formSeed}
+              mode={editingRecord ? "edit" : "create"}
+              editingSummary={editingRecord ? `${editingRecord.store} - ${editingRecord.month}` : undefined}
+              statusNotice={statusNotice}
+              title={editingRecord ? "编辑门店评分" : "新建门店评分"}
+              description="录入页会显式区分新建和编辑，不再对同一个月份和门店进行静默覆盖。"
+              submitLabel={editingRecord ? "更新评分" : "保存评分"}
+              onSubmit={handleSave}
+              onCancel={handleCancelEdit}
+              onMonthStoreChange={handleMonthStoreChange}
+            />
+          </>
+        ) : null}
+
+        {activePanel === "executionCompliance" ? <ExecutionComplianceSection /> : null}
+
+        {activePanel === "recentRecords" ? (
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">最近记录</h2>
+              <p className="mt-1 text-sm text-slate-600">可以直接点“编辑”回到数据管理评分，系统会自动加载原记录。</p>
+            </div>
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-slate-50 text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">月份</th>
+                    <th className="px-4 py-3 font-medium">门店</th>
+                    <th className="px-4 py-3 font-medium">门店类型</th>
+                    <th className="px-4 py-3 font-medium">总扣分</th>
+                    <th className="px-4 py-3 font-medium">最终得分</th>
+                    <th className="px-4 py-3 font-medium">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentRecords.map((record) => (
+                    <tr key={record.id} className="border-t border-slate-200">
+                      <td className="px-4 py-3">{record.month}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{record.store}</td>
+                      <td className="px-4 py-3 text-slate-600">{STORE_TYPE_DISPLAY[record.storeType]}</td>
+                      <td className="px-4 py-3">{record.totalDeduction.toFixed(2)}</td>
+                      <td className="px-4 py-3 font-semibold text-emerald-700">{record.finalScore.toFixed(2)}</td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/?edit=${record.id}`}
+                          onClick={() => setActivePanel("dataManagement")}
+                          className="inline-flex rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          编辑
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                  {recentRecords.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                        暂无记录。可以先使用数据管理评分表单录入，或加载示例数据进行演示。
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }
